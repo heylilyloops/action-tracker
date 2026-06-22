@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Action Tracker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#f8f8f7;
+    --surface:#ffffff;
+    --border:#e5e5e3;
+    --border-hover:#c8c8c5;
+    --text:#1a1a18;
+    --text-secondary:#6b6b68;
+    --text-hint:#a0a09d;
+    --radius:8px;
+    --radius-lg:12px;
+    --blue-bg:#e8f0fb;--blue-text:#1a4fa0;
+    --green-bg:#e6f4e6;--green-text:#1e6b2e;
+    --amber-bg:#fef3d8;--amber-text:#8a5a00;
+    --red-bg:#fdecea;--red-text:#9b1c1c;
+    --red-dark-bg:#d32f2f;--red-dark-text:#fff;
+    --purple-bg:#ede8fc;--purple-text:#4a2fa0;
+    --teal-bg:#e0f5ee;--teal-text:#0a5c42;
+    --pink-bg:#fce8f3;--pink-text:#8a1a5c;
+    --gray-bg:#f0efed;--gray-text:#44443f;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh}
+  .app{max-width:1200px;margin:0 auto;padding:24px 20px}
+  h1{font-size:20px;font-weight:600;letter-spacing:-.3px}
+  .subtitle{font-size:13px;color:var(--text-secondary);margin-top:2px}
+
+  /* KPI */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:20px 0}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
+  .kpi-label{font-size:11px;color:var(--text-secondary);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  .kpi-val{font-size:26px;font-weight:600;line-height:1}
+  .kpi-val.danger{color:#c0392b}
+  .kpi-val.warning{color:#d97706}
+  .kpi-val.info{color:#1a4fa0}
+  .kpi-val.success{color:#1e6b2e}
+
+  /* Tabs */
+  .tab-bar{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px;overflow-x:auto;padding-bottom:0}
+  .tab-btn{font-size:13px;font-weight:500;padding:8px 16px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;transition:color .15s}
+  .tab-btn:hover{color:var(--text)}
+  .tab-btn.active{color:var(--text);border-bottom-color:var(--text)}
+
+  /* Toolbar */
+  .toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+  .toolbar input[type=text]{flex:1;min-width:160px;height:34px;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;font-size:13px;background:var(--surface);color:var(--text);outline:none}
+  .toolbar input[type=text]:focus{border-color:var(--border-hover)}
+  .toolbar select{height:34px;border:1px solid var(--border);border-radius:var(--radius);padding:0 8px;font-size:13px;background:var(--surface);color:var(--text);outline:none;cursor:pointer}
+  .btn-add{height:34px;padding:0 16px;background:var(--text);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+  .btn-add:hover{opacity:.85}
+
+  /* Table */
+  .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:700px}
+  th{font-size:11px;font-weight:600;color:var(--text-secondary);padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);background:#fafaf9;white-space:nowrap;text-transform:uppercase;letter-spacing:.04em}
+  td{font-size:13px;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:#fafaf9}
+  .empty-row td{text-align:center;padding:32px;color:var(--text-hint)}
+
+  /* Badges */
+  .badge{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;white-space:nowrap}
+  .b-blue{background:var(--blue-bg);color:var(--blue-text)}
+  .b-green{background:var(--green-bg);color:var(--green-text)}
+  .b-amber{background:var(--amber-bg);color:var(--amber-text)}
+  .b-red{background:var(--red-bg);color:var(--red-text)}
+  .b-red-dark{background:var(--red-dark-bg);color:var(--red-dark-text)}
+  .b-purple{background:var(--purple-bg);color:var(--purple-text)}
+  .b-teal{background:var(--teal-bg);color:var(--teal-text)}
+  .b-pink{background:var(--pink-bg);color:var(--pink-text)}
+  .b-gray{background:var(--gray-bg);color:var(--gray-text)}
+
+  /* Action buttons */
+  .btn-icon{background:transparent;border:1px solid var(--border);border-radius:6px;cursor:pointer;color:var(--text-secondary);padding:4px 7px;font-size:13px;transition:all .15s;margin-right:3px}
+  .btn-icon:hover{background:var(--bg);color:var(--text);border-color:var(--border-hover)}
+  .btn-del:hover{color:#c0392b;border-color:#fca5a5}
+
+  /* Modal */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:center;justify-content:center;padding:20px}
+  .overlay.open{display:flex}
+  .modal{background:var(--surface);border-radius:var(--radius-lg);padding:24px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .modal-header h2{font-size:16px;font-weight:600}
+  .btn-close{background:transparent;border:none;cursor:pointer;color:var(--text-secondary);font-size:18px;padding:2px 6px;border-radius:4px}
+  .btn-close:hover{background:var(--bg);color:var(--text)}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-grid .full{grid-column:1/-1}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em}
+  .field input,.field select,.field textarea{height:36px;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;font-size:13px;background:var(--bg);color:var(--text);outline:none;font-family:inherit}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--border-hover);background:var(--surface)}
+  .field textarea{height:72px;resize:vertical;padding:8px 10px}
+  .modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+  .btn-cancel{height:36px;padding:0 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius);font-size:13px;cursor:pointer;color:var(--text-secondary)}
+  .btn-cancel:hover{background:var(--bg)}
+  .btn-save{height:36px;padding:0 20px;background:var(--text);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer}
+  .btn-save:hover{opacity:.85}
+
+  /* Toast */
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:10px 18px;border-radius:var(--radius);font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity .25s;pointer-events:none}
+  .toast.show{opacity:1}
+
+  /* Loading */
+  .loading{text-align:center;padding:40px;color:var(--text-hint);font-size:13px}
+
+  /* Status dot */
+  .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+  .dot-todo{background:#a0a09d}
+  .dot-prog{background:#1a4fa0}
+  .dot-done{background:#1e6b2e}
+  .dot-wait{background:#d97706}
+
+  .tag-cell{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .notes-cell{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-hint);font-size:12px}
+  .title-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+
+  @media(max-width:640px){
+    .form-grid{grid-template-columns:1fr}
+    .form-grid .full{grid-column:1}
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+    <div>
+      <h1>&#x1F4CB; Action Tracker</h1>
+      <div class="subtitle" id="last-saved">Memuat data...</div>
+    </div>
+    <button class="btn-add" onclick="openForm()">+ Tambah</button>
+  </div>
+
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi"><div class="kpi-label">Total aktif</div><div class="kpi-val" id="k-aktif">—</div></div>
+    <div class="kpi"><div class="kpi-label">Deadline minggu ini</div><div class="kpi-val warning" id="k-week">—</div></div>
+    <div class="kpi"><div class="kpi-label">Overdue</div><div class="kpi-val danger" id="k-over">—</div></div>
+    <div class="kpi"><div class="kpi-label">Menunggu respons</div><div class="kpi-val info" id="k-wait">—</div></div>
+    <div class="kpi"><div class="kpi-label">Selesai</div><div class="kpi-val success" id="k-done">—</div></div>
+  </div>
+
+  <div class="tab-bar" id="tab-bar"></div>
+
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="&#x1F50D; Cari task..." oninput="renderTable()">
+    <select id="f-status" onchange="renderTable()">
+      <option value="">Semua status</option>
+      <option>To Do</option>
+      <option>In Progress</option>
+      <option>Done</option>
+      <option>Menunggu</option>
+    </select>
+    <select id="f-priority" onchange="renderTable()">
+      <option value="">Semua prioritas</option>
+      <option>High</option>
+      <option>Medium</option>
+      <option>Low</option>
+    </select>
+    <select id="f-dl" onchange="renderTable()">
+      <option value="">Semua deadline</option>
+      <option value="overdue">Overdue</option>
+      <option value="today">Hari ini</option>
+      <option value="week">Minggu ini</option>
+    </select>
+  </div>
+
+  <div class="tbl-wrap">
+    <table>
+      <thead id="thead"><tr><th>Memuat...</th></tr></thead>
+      <tbody id="tbody"><tr class="empty-row"><td>Memuat data...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Tambah task</h2>
+      <button class="btn-close" onclick="closeForm()">&#x2715;</button>
+    </div>
+    <div id="form-body"></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeForm()">Batal</button>
+      <button class="btn-save" onclick="saveRecord()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://gbfkelvlewqayxnzgkqw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ApxBlDFJRU8qbXTMuK0Njg_ZzZYlQoB';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TABS = [
+  {id:'semua', label:'Semua', table:null},
+  {id:'meetings', label:'Meeting', table:'meetings'},
+  {id:'projects', label:'Project', table:'projects'},
+  {id:'tasks', label:'Task', table:'tasks'},
+  {id:'koordinasi', label:'Koordinasi', table:'koordinasi'},
+  {id:'delegasi', label:'Delegasi', table:'delegasi'},
+];
+
+const COLUMNS = {
+  meetings:[
+    {key:'nama_meeting',label:'Nama meeting',type:'text',required:true},
+    {key:'tanggal_meeting',label:'Tanggal meeting',type:'date'},
+    {key:'peserta',label:'Peserta',type:'text'},
+    {key:'keputusan',label:'Keputusan',type:'textarea'},
+    {key:'follow_up',label:'Follow-up action',type:'textarea'},
+    {key:'pic',label:'PIC',type:'text'},
+    {key:'deadline',label:'Deadline',type:'date'},
+    {key:'status',label:'Status',type:'select',opts:['To Do','In Progress','Done','Menunggu']},
+    {key:'notes',label:'Notes',type:'textarea'},
+  ],
+  projects:[
+    {key:'nama_project',label:'Nama project',type:'text',required:true},
+    {key:'fase',label:'Fase / milestone',type:'text'},
+    {key:'deskripsi',label:'Deskripsi task',type:'textarea'},
+    {key:'responsible',label:'R — Responsible',type:'text'},
+    {key:'accountable',label:'A — Accountable',type:'text'},
+    {key:'consulted',label:'C — Consulted',type:'text'},
+    {key:'informed',label:'I — Informed',type:'text'},
+    {key:'deadline',label:'Deadline',type:'date'},
+    {key:'status',label:'Status',type:'select',opts:['To Do','In Progress','Done','Menunggu']},
+    {key:'prioritas',label:'Prioritas',type:'select',opts:['High','Medium','Low']},
+    {key:'notes',label:'Notes',type:'textarea'},
+  ],
+  tasks:[
+    {key:'judul',label:'Judul task',type:'text',required:true},
+    {key:'deskripsi',label:'Deskripsi',type:'textarea'},
+    {key:'pic_internal',label:'PIC internal',type:'text'},
+    {key:'deadline',label:'Deadline',type:'date'},
+    {key:'prioritas',label:'Prioritas',type:'select',opts:['High','Medium','Low']},
+    {key:'status',label:'Status',type:'select',opts:['To Do','In Progress','Done','Menunggu']},
+    {key:'notes',label:'Notes',type:'textarea'},
+  ],
+  koordinasi:[
+    {key:'topik',label:'Topik koordinasi',type:'text',required:true},
+    {key:'dept_terkait',label:'Dept terkait',type:'text'},
+    {key:'pic_eksternal',label:'PIC eksternal',type:'text'},
+    {key:'status_koordinasi',label:'Status koordinasi',type:'select',opts:['Menunggu respons','Sudah dikonfirmasi','Ditolak','—']},
+    {key:'deadline',label:'Deadline',type:'date'},
+    {key:'notes',label:'Notes',type:'textarea'},
+  ],
+  delegasi:[
+    {key:'judul',label:'Judul task',type:'text',required:true},
+    {key:'didelegasikan_ke',label:'Didelegasikan ke',type:'text'},
+    {key:'dept',label:'Dept',type:'text'},
+    {key:'deadline_laporan',label:'Deadline laporan balik',type:'date'},
+    {key:'status',label:'Status',type:'select',opts:['To Do','In Progress','Done','Menunggu']},
+    {key:'catatan_followup',label:'Catatan follow-up',type:'textarea'},
+  ],
+};
+
+const TABLE_HEADERS = {
+  meetings:['Nama Meeting','Tgl Meeting','Peserta','Follow-up','PIC','Deadline','Status','Notes','Aksi'],
+  projects:['Nama Project','Fase','Deskripsi','R','A','C','I','Deadline','Status','Prioritas','Notes','Aksi'],
+  tasks:['Judul Task','Deskripsi','PIC','Deadline','Prioritas','Status','Notes','Aksi'],
+  koordinasi:['Topik','Dept','PIC Eksternal','Status Koordinasi','Deadline','Notes','Aksi'],
+  delegasi:['Judul Task','Delegasi ke','Dept','Deadline Laporan','Status','Catatan Follow-up','Aksi'],
+};
+
+let activeTab = 'semua';
+let allData = {};
+let editId = null;
+let editTable = null;
+
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+function deadlineBadge(dl){
+  if(!dl) return '<span style="color:#ccc">—</span>';
+  const today=new Date();today.setHours(0,0,0,0);
+  const d=new Date(dl);d.setHours(0,0,0,0);
+  const diff=Math.round((d-today)/(86400000));
+  if(diff<0) return `<span class="badge b-red-dark">Overdue ${Math.abs(diff)}h</span>`;
+  if(diff===0) return `<span class="badge b-red">Hari ini</span>`;
+  if(diff<=3) return `<span class="badge b-amber">${diff} hari lagi</span>`;
+  return `<span class="badge b-gray">${d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</span>`;
+}
+
+function statusBadge(s){
+  if(!s) return '—';
+  const map={'To Do':'b-gray','In Progress':'b-blue','Done':'b-green','Menunggu':'b-amber'};
+  return `<span class="badge ${map[s]||'b-gray'}">${s}</span>`;
+}
+
+function prioBadge(p){
+  if(!p) return '—';
+  const map={High:'b-red',Medium:'b-amber',Low:'b-green'};
+  return `<span class="badge ${map[p]||'b-gray'}">${p}</span>`;
+}
+
+function getTitle(table, row){
+  return row.nama_meeting||row.nama_project||row.judul||row.topik||'—';
+}
+
+function getDeadline(table, row){
+  return row.deadline||row.deadline_laporan||null;
+}
+
+function getStatus(table, row){
+  return row.status||row.status_koordinasi||null;
+}
+
+async function loadAll(){
+  document.getElementById('last-saved').textContent='Memuat data...';
+  allData={};
+  const tables=['meetings','projects','tasks','koordinasi','delegasi'];
+  for(const t of tables){
+    const {data,error}=await sb.from(t).select('*').order('created_at',{ascending:false});
+    allData[t]=error?[]:data;
+  }
+  updateKPI();
+  renderTabs();
+  renderTable();
+  document.getElementById('last-saved').textContent='Tersimpan · '+new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+}
+
+function getAllRows(){
+  return Object.entries(allData).flatMap(([t,rows])=>rows.map(r=>({...r,_table:t})));
+}
+
+function updateKPI(){
+  const all=getAllRows();
+  const today=new Date();today.setHours(0,0,0,0);
+  const weekEnd=new Date(today);weekEnd.setDate(today.getDate()+7);
+  const active=all.filter(r=>getStatus(r._table,r)!=='Done').length;
+  const week=all.filter(r=>{const dl=getDeadline(r._table,r);if(!dl||getStatus(r._table,r)==='Done')return false;const d=new Date(dl);d.setHours(0,0,0,0);return d>=today&&d<=weekEnd;}).length;
+  const over=all.filter(r=>{const dl=getDeadline(r._table,r);if(!dl||getStatus(r._table,r)==='Done')return false;const d=new Date(dl);d.setHours(0,0,0,0);return d<today;}).length;
+  const wait=all.filter(r=>getStatus(r._table,r)==='Menunggu'||r.status_koordinasi==='Menunggu respons').length;
+  const done=all.filter(r=>getStatus(r._table,r)==='Done').length;
+  document.getElementById('k-aktif').textContent=active;
+  document.getElementById('k-week').textContent=week;
+  document.getElementById('k-over').textContent=over;
+  document.getElementById('k-wait').textContent=wait;
+  document.getElementById('k-done').textContent=done;
+}
+
+function renderTabs(){
+  const counts={semua:getAllRows().length};
+  ['meetings','projects','tasks','koordinasi','delegasi'].forEach(t=>counts[t]=(allData[t]||[]).length);
+  document.getElementById('tab-bar').innerHTML=TABS.map(t=>
+    `<button class="tab-btn${t.id===activeTab?' active':''}" onclick="setTab('${t.id}')">${t.label} <span style="font-size:11px;color:var(--text-hint)">${counts[t.id]||0}</span></button>`
+  ).join('');
+}
+
+function setTab(id){activeTab=id;renderTabs();renderTable();}
+
+function filterRows(rows, table){
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  const fs=document.getElementById('f-status').value;
+  const fp=document.getElementById('f-priority').value;
+  const fd=document.getElementById('f-dl').value;
+  const today=new Date();today.setHours(0,0,0,0);
+  const weekEnd=new Date(today);weekEnd.setDate(today.getDate()+7);
+  return rows.filter(r=>{
+    const title=getTitle(table,r).toLowerCase();
+    if(q&&!title.includes(q)) return false;
+    if(fs&&getStatus(table,r)!==fs) return false;
+    if(fp&&r.prioritas!==fp) return false;
+    if(fd){
+      const dl=getDeadline(table,r);
+      if(!dl) return false;
+      const d=new Date(dl);d.setHours(0,0,0,0);
+      if(fd==='overdue'&&d>=today) return false;
+      if(fd==='today'&&d.getTime()!==today.getTime()) return false;
+      if(fd==='week'&&(d<today||d>weekEnd)) return false;
+    }
+    return true;
+  });
+}
+
+function renderTable(){
+  const thead=document.getElementById('thead');
+  const tbody=document.getElementById('tbody');
+
+  if(activeTab==='semua'){
+    thead.innerHTML='<tr><th>Judul</th><th>Kategori</th><th>Status</th><th>Prioritas</th><th>Deadline</th><th>PIC</th><th>Notes</th><th>Aksi</th></tr>';
+    let rows=getAllRows();
+    rows=filterRows(rows,'_mixed');
+    if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="8">Belum ada data</td></tr>';return;}
+    tbody.innerHTML=rows.map(r=>{
+      const catMap={meetings:'Meeting',projects:'Project',tasks:'Task',koordinasi:'Koordinasi',delegasi:'Delegasi'};
+      const catBadge={meetings:'b-blue',projects:'b-purple',tasks:'b-gray',koordinasi:'b-teal',delegasi:'b-pink'};
+      const dl=getDeadline(r._table,r);
+      const pic=r.pic||r.pic_internal||r.didelegasikan_ke||r.pic_eksternal||'—';
+      const notes=r.notes||r.catatan_followup||r.keputusan||'';
+      return `<tr>
+        <td class="title-cell" title="${getTitle(r._table,r)}">${getTitle(r._table,r)}</td>
+        <td><span class="badge ${catBadge[r._table]}">${catMap[r._table]}</span></td>
+        <td>${statusBadge(getStatus(r._table,r))}</td>
+        <td>${r.prioritas?prioBadge(r.prioritas):'—'}</td>
+        <td>${deadlineBadge(dl)}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${pic}</td>
+        <td class="notes-cell" title="${notes}">${notes||'—'}</td>
+        <td><button class="btn-icon" onclick="editRecord('${r._table}','${r.id}')">&#x270E;</button><button class="btn-icon btn-del" onclick="deleteRecord('${r._table}','${r.id}')">&#x2715;</button></td>
+      </tr>`;
+    }).join('');
+    return;
+  }
+
+  const tabObj=TABS.find(t=>t.id===activeTab);
+  const table=tabObj.table;
+  const headers=TABLE_HEADERS[table]||[];
+  thead.innerHTML='<tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+
+  let rows=filterRows(allData[table]||[],table);
+  if(!rows.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="${headers.length}">Belum ada data. Klik + Tambah untuk mulai.</td></tr>`;return;}
+
+  tbody.innerHTML=rows.map(r=>{
+    let cells='';
+    const dl=getDeadline(table,r);
+
+    if(table==='meetings'){
+      cells=`
+        <td class="title-cell" title="${r.nama_meeting||''}">${r.nama_meeting||'—'}</td>
+        <td style="font-size:12px">${r.tanggal_meeting?new Date(r.tanggal_meeting).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—'}</td>
+        <td class="tag-cell" title="${r.peserta||''}" style="font-size:12px;color:var(--text-secondary)">${r.peserta||'—'}</td>
+        <td class="notes-cell" title="${r.follow_up||''}">${r.follow_up||'—'}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${r.pic||'—'}</td>
+        <td>${deadlineBadge(dl)}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td class="notes-cell" title="${r.notes||''}">${r.notes||'—'}</td>`;
+    } else if(table==='projects'){
+      cells=`
+        <td class="title-cell" title="${r.nama_project||''}">${r.nama_project||'—'}</td>
+        <td style="font-size:12px"><span class="badge b-gray">${r.fase||'—'}</span></td>
+        <td class="notes-cell" title="${r.deskripsi||''}">${r.deskripsi||'—'}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${r.responsible||'—'}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${r.accountable||'—'}</td>
+        <td class="tag-cell" style="font-size:12px;color:var(--text-secondary)" title="${r.consulted||''}">${r.consulted||'—'}</td>
+        <td class="tag-cell" style="font-size:12px;color:var(--text-secondary)" title="${r.informed||''}">${r.informed||'—'}</td>
+        <td>${deadlineBadge(dl)}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td>${prioBadge(r.prioritas)}</td>
+        <td class="notes-cell" title="${r.notes||''}">${r.notes||'—'}</td>`;
+    } else if(table==='tasks'){
+      cells=`
+        <td class="title-cell" title="${r.judul||''}">${r.judul||'—'}</td>
+        <td class="notes-cell" title="${r.deskripsi||''}">${r.deskripsi||'—'}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${r.pic_internal||'—'}</td>
+        <td>${deadlineBadge(dl)}</td>
+        <td>${prioBadge(r.prioritas)}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td class="notes-cell" title="${r.notes||''}">${r.notes||'—'}</td>`;
+    } else if(table==='koordinasi'){
+      const skMap={'Menunggu respons':'b-amber','Sudah dikonfirmasi':'b-green','Ditolak':'b-red'};
+      cells=`
+        <td class="title-cell" title="${r.topik||''}">${r.topik||'—'}</td>
+        <td style="font-size:12px"><span class="badge b-teal">${r.dept_terkait||'—'}</span></td>
+        <td style="font-size:12px;color:var(--text-secondary)">${r.pic_eksternal||'—'}</td>
+        <td><span class="badge ${skMap[r.status_koordinasi]||'b-gray'}">${r.status_koordinasi||'—'}</span></td>
+        <td>${deadlineBadge(dl)}</td>
+        <td class="notes-cell" title="${r.notes||''}">${r.notes||'—'}</td>`;
+    } else if(table==='delegasi'){
+      cells=`
+        <td class="title-cell" title="${r.judul||''}">${r.judul||'—'}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${r.didelegasikan_ke||'—'}</td>
+        <td style="font-size:12px"><span class="badge b-pink">${r.dept||'—'}</span></td>
+        <td>${deadlineBadge(r.deadline_laporan)}</td>
+        <td>${statusBadge(r.status)}</td>
+        <td class="notes-cell" title="${r.catatan_followup||''}">${r.catatan_followup||'—'}</td>`;
+    }
+
+    return `<tr>${cells}<td><button class="btn-icon" onclick="editRecord('${table}','${r.id}')">&#x270E;</button><button class="btn-icon btn-del" onclick="deleteRecord('${table}','${r.id}')">&#x2715;</button></td></tr>`;
+  }).join('');
+}
+
+function buildForm(table, data){
+  const cols=COLUMNS[table]||[];
+  const half=[];const full=[];
+  cols.forEach(c=>{
+    if(c.type==='textarea') full.push(c);
+    else half.push(c);
+  });
+  const renderField=c=>{
+    const val=data?.(c.key)||'';
+    let input='';
+    if(c.type==='select'){
+      input=`<select id="ff-${c.key}">${(c.opts||[]).map(o=>`<option${val===o?' selected':''}>${o}</option>`).join('')}</select>`;
+    } else if(c.type==='textarea'){
+      input=`<textarea id="ff-${c.key}" placeholder="${c.label}...">${val}</textarea>`;
+    } else if(c.type==='date'){
+      input=`<input type="date" id="ff-${c.key}" value="${val}">`;
+    } else {
+      input=`<input type="text" id="ff-${c.key}" placeholder="${c.label}..." value="${val}">`;
+    }
+    return `<div class="field ${c.type==='textarea'?'full':''}"><label>${c.label}${c.required?' *':''}</label>${input}</div>`;
+  };
+
+  return `<div class="form-grid">${cols.map(renderField).join('')}</div>`;
+}
+
+function openForm(table, data){
+  editId=data?.id||null;
+  editTable=table||(activeTab==='semua'?null:TABS.find(t=>t.id===activeTab)?.table)||'tasks';
+
+  document.getElementById('modal-title').textContent=editId?'Edit item':'Tambah item';
+
+  let formHtml='';
+  if(!table && activeTab==='semua'){
+    formHtml=`<div class="field full" style="margin-bottom:12px"><label>Kategori *</label><select id="ff-_table" onchange="switchFormTab(this.value)"><option value="tasks">Task</option><option value="meetings">Meeting</option><option value="projects">Project</option><option value="koordinasi">Koordinasi</option><option value="delegasi">Delegasi</option></select></div><div id="form-fields">${buildForm('tasks',null)}</div>`;
+  } else {
+    formHtml=`<div id="form-fields">${buildForm(editTable,data?k=>data[k]:null)}</div>`;
+  }
+
+  document.getElementById('form-body').innerHTML=formHtml;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function switchFormTab(t){
+  editTable=t;
+  document.getElementById('form-fields').innerHTML=buildForm(t,null);
+}
+
+function closeForm(){document.getElementById('overlay').classList.remove('open');editId=null;editTable=null;}
+
+async function saveRecord(){
+  if(activeTab==='semua'&&!editId){
+    const sel=document.getElementById('ff-_table');
+    if(sel) editTable=sel.value;
+  }
+  const table=editTable||'tasks';
+  const cols=COLUMNS[table]||[];
+  const payload={};
+  for(const c of cols){
+    const el=document.getElementById('ff-'+c.key);
+    if(el) payload[c.key]=el.value||null;
+    if(c.required&&(!el||!el.value.trim())){toast('Lengkapi field wajib!');return;}
+  }
+  let err;
+  if(editId){
+    const res=await sb.from(table).update(payload).eq('id',editId);
+    err=res.error;
+  } else {
+    const res=await sb.from(table).insert(payload);
+    err=res.error;
+  }
+  if(err){toast('Gagal simpan: '+err.message);return;}
+  toast(editId?'Berhasil diupdate!':'Berhasil ditambahkan!');
+  closeForm();
+  await loadAll();
+}
+
+async function editRecord(table, id){
+  const row=(allData[table]||[]).find(r=>r.id===id);
+  if(!row) return;
+  editTable=table;
+  openForm(table, k=>row[k]);
+}
+
+async function deleteRecord(table, id){
+  if(!confirm('Hapus item ini?')) return;
+  const {error}=await sb.from(table).delete().eq('id',id);
+  if(error){toast('Gagal hapus!');return;}
+  toast('Item dihapus.');
+  await loadAll();
+}
+
+document.getElementById('overlay').addEventListener('click',function(e){if(e.target===this)closeForm();});
+
+loadAll();
+</script>
+</body>
+</html>
