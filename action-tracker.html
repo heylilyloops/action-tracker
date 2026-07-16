@@ -120,6 +120,12 @@
 
   .tag-cell{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .notes-cell{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-hint);font-size:12px}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--text)}
+  th.sortable .sort-icon{margin-left:4px;opacity:.4;font-size:10px}
+  th.sortable.asc .sort-icon::after{content:'▲';opacity:1}
+  th.sortable.desc .sort-icon::after{content:'▼';opacity:1}
+  th.sortable:not(.asc):not(.desc) .sort-icon::after{content:'⇅'}
   .title-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
 
   .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
@@ -310,6 +316,34 @@ let activeTab = 'semua';
 let allData = {};
 let editId = null;
 let editTable = null;
+let sortKey = null;
+let sortDir = 1; // 1=asc, -1=desc
+
+function setSort(key){
+  if(sortKey===key){ sortDir*=-1; }
+  else { sortKey=key; sortDir=1; }
+  renderTable();
+}
+
+function applySorting(rows, table){
+  if(!sortKey) return rows;
+  return [...rows].sort((a,b)=>{
+    let av='', bv='';
+    if(sortKey==='title'){ av=getTitle(table,a); bv=getTitle(table,b); }
+    else if(sortKey==='status'){ av=getStatus(table,a)||''; bv=getStatus(table,b)||''; }
+    else if(sortKey==='deadline'){ av=getDeadline(table,a)||''; bv=getDeadline(table,b)||''; }
+    else if(sortKey==='dept'){ av=a.dept||a.dept_owner||''; bv=b.dept||b.dept_owner||''; }
+    else if(sortKey==='prioritas'){ 
+      const o={High:0,Medium:1,Low:2};
+      av=o[a.prioritas]??9; bv=o[b.prioritas]??9;
+      return (av-bv)*sortDir;
+    }
+    else { av=a[sortKey]||''; bv=b[sortKey]||''; }
+    return av.localeCompare(bv)*sortDir;
+  });
+}
+
+function sortClass(key){ return sortKey===key?(sortDir===1?'sortable asc':'sortable desc'):'sortable'; }
 
 function toast(msg){
   const t=document.getElementById('toast');
@@ -525,7 +559,15 @@ function renderTable(){
   const tbody=document.getElementById('tbody');
 
   if(activeTab==='semua'){
-    thead.innerHTML='<tr><th>Judul</th><th>Kategori</th><th>Dept</th><th>Status</th><th>Prioritas</th><th>Deadline</th><th>PIC</th><th>Notes</th><th>Aksi</th></tr>';
+    thead.innerHTML=`<tr>
+    <th class="${sortClass('title')}" onclick="setSort('title')">Judul<span class="sort-icon"></span></th>
+    <th>Kategori</th>
+    <th class="${sortClass('dept')}" onclick="setSort('dept')">Dept<span class="sort-icon"></span></th>
+    <th class="${sortClass('status')}" onclick="setSort('status')">Status<span class="sort-icon"></span></th>
+    <th class="${sortClass('prioritas')}" onclick="setSort('prioritas')">Prioritas<span class="sort-icon"></span></th>
+    <th class="${sortClass('deadline')}" onclick="setSort('deadline')">Deadline<span class="sort-icon"></span></th>
+    <th>PIC</th><th>Notes</th><th>Aksi</th>
+  </tr>`;
     let rows=getAllRows();
     rows=filterRows(rows,'_mixed');
     if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="8">Belum ada data</td></tr>';return;}
@@ -553,9 +595,19 @@ function renderTable(){
   const tabObj=TABS.find(t=>t.id===activeTab);
   const table=tabObj.table;
   const headers=TABLE_HEADERS[table]||[];
-  thead.innerHTML='<tr>'+headers.map(h=>`<th>${h}</th>`).join('')+'</tr>';
+  const sortableKeys = {
+    'Nama Meeting':'title','Nama Project':'title','Judul Task':'title','Topik':'title',
+    'Status':'status','Deadline':'deadline','Prioritas':'prioritas','Dept':'dept',
+    'Deadline Laporan':'deadline'
+  };
+  thead.innerHTML='<tr>'+headers.map(h=>{
+    const sk=sortableKeys[h];
+    if(sk) return `<th class="${sortClass(sk)}" onclick="setSort('${sk}')">${h}<span class="sort-icon"></span></th>`;
+    return `<th>${h}</th>`;
+  }).join('')+'</tr>';
 
   let rows=filterRows(allData[table]||[],table);
+  rows=applySorting(rows,table);
   if(!rows.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="${headers.length}">Belum ada data. Klik + Tambah untuk mulai.</td></tr>`;return;}
 
   tbody.innerHTML=rows.map(r=>{
