@@ -642,19 +642,16 @@ function buildForm(table, data){
   return `<div class="form-grid">${cols.map(renderField).join('')}</div>`;
 }
 
-function openForm(table, data){
-  editId=data?.id||null;
-  editTable=table||(activeTab==='semua'?null:TABS.find(t=>t.id===activeTab)?.table)||'tasks';
-
-  document.getElementById('modal-title').textContent=editId?'Edit item':'Tambah item';
-
+function openForm(){
+  editId=null;
+  editTable=(activeTab==='semua'?'tasks':TABS.find(t=>t.id===activeTab)?.table)||'tasks';
+  document.getElementById('modal-title').textContent='Tambah item';
   let formHtml='';
-  if(!table && activeTab==='semua'){
+  if(activeTab==='semua'){
     formHtml=`<div class="field full" style="margin-bottom:12px"><label>Kategori *</label><select id="ff-_table" onchange="switchFormTab(this.value)"><option value="tasks">Task</option><option value="meetings">Meeting</option><option value="projects">Project</option><option value="koordinasi">Koordinasi</option><option value="delegasi">Delegasi</option></select></div><div id="form-fields">${buildForm('tasks',null)}</div>`;
   } else {
-    formHtml=`<div id="form-fields">${buildForm(editTable,data?k=>data[k]:null)}</div>`;
+    formHtml=`<div id="form-fields">${buildForm(editTable,null)}</div>`;
   }
-
   document.getElementById('form-body').innerHTML=formHtml;
   document.getElementById('overlay').classList.add('open');
 }
@@ -695,9 +692,20 @@ async function saveRecord(){
 
 async function editRecord(table, id){
   const row=(allData[table]||[]).find(r=>r.id===id);
-  if(!row) return;
+  if(!row){toast('Data tidak ditemukan');return;}
+  editId=id;
   editTable=table;
-  openForm(table, k=>row[k]);
+  document.getElementById('modal-title').textContent='Edit item';
+  // Show kategori selector if in semua tab
+  let formHtml='';
+  if(activeTab==='semua'){
+    const catVal=table;
+    formHtml=`<div class="field full" style="margin-bottom:12px"><label>Kategori *</label><select id="ff-_table" disabled><option value="${catVal}">${{meetings:'Meeting',projects:'Project',tasks:'Task',koordinasi:'Koordinasi',delegasi:'Delegasi'}[catVal]}</option></select></div><div id="form-fields">${buildForm(table,k=>row[k])}</div>`;
+  } else {
+    formHtml=`<div id="form-fields">${buildForm(table,k=>row[k])}</div>`;
+  }
+  document.getElementById('form-body').innerHTML=formHtml;
+  document.getElementById('overlay').classList.add('open');
 }
 
 async function deleteRecord(table, id){
