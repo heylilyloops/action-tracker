@@ -169,6 +169,13 @@
       <option value="today">Hari ini</option>
       <option value="week">Minggu ini</option>
     </select>
+    <select id="f-dept" onchange="renderTable()">
+      <option value="">Semua dept</option>
+      <option>Transport Operation</option>
+      <option>Transport HUB</option>
+      <option>Transport Support</option>
+      <option>Transport Service</option>
+    </select>
   </div>
 
   <div class="tbl-wrap">
@@ -210,9 +217,12 @@ const TABS = [
   {id:'delegasi', label:'Delegasi', table:'delegasi'},
 ];
 
+const DEPTS = ['Transport Operation','Transport HUB','Transport Support','Transport Service'];
+
 const COLUMNS = {
   meetings:[
     {key:'nama_meeting',label:'Nama meeting',type:'text',required:true},
+    {key:'dept',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
     {key:'tanggal_meeting',label:'Tanggal meeting',type:'date'},
     {key:'peserta',label:'Peserta',type:'text'},
     {key:'keputusan',label:'Keputusan',type:'textarea'},
@@ -224,6 +234,7 @@ const COLUMNS = {
   ],
   projects:[
     {key:'nama_project',label:'Nama project',type:'text',required:true},
+    {key:'dept',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
     {key:'fase',label:'Fase / milestone',type:'text'},
     {key:'deskripsi',label:'Deskripsi task',type:'textarea'},
     {key:'responsible',label:'R — Responsible',type:'text'},
@@ -237,6 +248,7 @@ const COLUMNS = {
   ],
   tasks:[
     {key:'judul',label:'Judul task',type:'text',required:true},
+    {key:'dept',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
     {key:'deskripsi',label:'Deskripsi',type:'textarea'},
     {key:'pic_internal',label:'PIC internal',type:'text'},
     {key:'deadline',label:'Deadline',type:'date'},
@@ -246,6 +258,7 @@ const COLUMNS = {
   ],
   koordinasi:[
     {key:'topik',label:'Topik koordinasi',type:'text',required:true},
+    {key:'dept',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
     {key:'dept_terkait',label:'Dept terkait',type:'text'},
     {key:'pic_eksternal',label:'PIC eksternal',type:'text'},
     {key:'status_koordinasi',label:'Status koordinasi',type:'select',opts:['Menunggu respons','Sudah dikonfirmasi','Ditolak','—']},
@@ -254,6 +267,7 @@ const COLUMNS = {
   ],
   delegasi:[
     {key:'judul',label:'Judul task',type:'text',required:true},
+    {key:'dept_owner',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
     {key:'didelegasikan_ke',label:'Didelegasikan ke',type:'text'},
     {key:'dept',label:'Dept',type:'text'},
     {key:'deadline_laporan',label:'Deadline laporan balik',type:'date'},
@@ -365,6 +379,7 @@ function filterRows(rows, table){
   const fs=document.getElementById('f-status').value;
   const fp=document.getElementById('f-priority').value;
   const fd=document.getElementById('f-dl').value;
+  const fdept=document.getElementById('f-dept').value;
   const today=new Date();today.setHours(0,0,0,0);
   const weekEnd=new Date(today);weekEnd.setDate(today.getDate()+7);
   return rows.filter(r=>{
@@ -372,6 +387,7 @@ function filterRows(rows, table){
     if(q&&!title.includes(q)) return false;
     if(fs&&getStatus(table,r)!==fs) return false;
     if(fp&&r.prioritas!==fp) return false;
+    if(fdept&&r.dept!==fdept&&r.dept_owner!==fdept) return false;
     if(fd){
       const dl=getDeadline(table,r);
       if(!dl) return false;
@@ -389,7 +405,7 @@ function renderTable(){
   const tbody=document.getElementById('tbody');
 
   if(activeTab==='semua'){
-    thead.innerHTML='<tr><th>Judul</th><th>Kategori</th><th>Status</th><th>Prioritas</th><th>Deadline</th><th>PIC</th><th>Notes</th><th>Aksi</th></tr>';
+    thead.innerHTML='<tr><th>Judul</th><th>Kategori</th><th>Dept</th><th>Status</th><th>Prioritas</th><th>Deadline</th><th>PIC</th><th>Notes</th><th>Aksi</th></tr>';
     let rows=getAllRows();
     rows=filterRows(rows,'_mixed');
     if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="8">Belum ada data</td></tr>';return;}
@@ -402,6 +418,7 @@ function renderTable(){
       return `<tr>
         <td class="title-cell" title="${getTitle(r._table,r)}">${getTitle(r._table,r)}</td>
         <td><span class="badge ${catBadge[r._table]}">${catMap[r._table]}</span></td>
+        <td style="font-size:12px;color:var(--text-secondary)">${r.dept||r.dept_owner||'—'}</td>
         <td>${statusBadge(getStatus(r._table,r))}</td>
         <td>${r.prioritas?prioBadge(r.prioritas):'—'}</td>
         <td>${deadlineBadge(dl)}</td>
