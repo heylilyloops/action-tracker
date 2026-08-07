@@ -526,7 +526,7 @@ function renderCharts(){
       datasets: [{
         label: 'Hari terlambat',
         data: agingDays.length ? agingDays : [0],
-        backgroundColor: agingDays.map(d => d > 14 ? '#c0392b' : d > 7 ? '#e07030' : '#e0a030'),
+        backgroundColor: agingDays.map(() => '#4a7fa0'),
         borderRadius: 5,
         borderSkipped: false,
       }]
@@ -685,9 +685,10 @@ function filterRows(rows, table){
       const dl=getDeadline(table,r);
       if(!dl) return false;
       const d=new Date(dl);d.setHours(0,0,0,0);
-      if(fd==='overdue'&&d>=today) return false;
-      if(fd==='today'&&d.getTime()!==today.getTime()) return false;
-      if(fd==='week'&&(d<today||d>weekEnd)) return false;
+      const st=getStatus(table,r);
+      if(fd==='overdue'&&(d>=today||st==='Done')) return false;
+      if(fd==='today'&&(d.getTime()!==today.getTime()||st==='Done')) return false;
+      if(fd==='week'&&(d<today||d>weekEnd||st==='Done')) return false;
     }
     return true;
   });
