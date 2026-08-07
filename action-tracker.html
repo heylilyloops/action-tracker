@@ -374,15 +374,17 @@ function toast(msg){
   setTimeout(()=>t.classList.remove('show'),2500);
 }
 
-function deadlineBadge(dl){
+function deadlineBadge(dl, status){
   if(!dl) return '<span style="color:#ccc">—</span>';
   const today=new Date();today.setHours(0,0,0,0);
   const d=new Date(dl);d.setHours(0,0,0,0);
   const diff=Math.round((d-today)/(86400000));
+  const dateStr=d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+  if(status==='Done') return `<span class="badge b-green">${dateStr}</span>`;
   if(diff<0) return `<span class="badge b-red-dark">Overdue ${Math.abs(diff)}h</span>`;
   if(diff===0) return `<span class="badge b-red">Hari ini</span>`;
   if(diff<=3) return `<span class="badge b-amber">${diff} hari lagi</span>`;
-  return `<span class="badge b-gray">${d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</span>`;
+  return `<span class="badge b-gray">${dateStr}</span>`;
 }
 
 function statusBadge(s){
@@ -656,7 +658,7 @@ function renderTable(){
         <td style="font-size:12px;color:var(--text-secondary)">${r.accountable||'—'}</td>
         <td class="tag-cell" style="font-size:12px;color:var(--text-secondary)" title="${r.consulted||''}">${r.consulted||'—'}</td>
         <td class="tag-cell" style="font-size:12px;color:var(--text-secondary)" title="${r.informed||''}">${r.informed||'—'}</td>
-        <td>${deadlineBadge(dl)}</td>
+        <td>${deadlineBadge(dl, r.status)}</td>
         <td>${statusBadge(r.status)}</td>
         <td>${prioBadge(r.prioritas)}</td>
         <td class="notes-cell" title="${r.notes||''}">${r.notes||'—'}</td>`;
@@ -665,7 +667,7 @@ function renderTable(){
         <td class="title-cell" title="${r.judul||''}">${r.judul||'—'}</td>
         <td class="notes-cell" title="${r.deskripsi||''}">${r.deskripsi||'—'}</td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.pic_internal||'—'}</td>
-        <td>${deadlineBadge(dl)}</td>
+        <td>${deadlineBadge(dl, r.status)}</td>
         <td>${prioBadge(r.prioritas)}</td>
         <td>${statusBadge(r.status)}</td>
         <td class="notes-cell" title="${r.notes||''}">${r.notes||'—'}</td>`;
@@ -676,14 +678,14 @@ function renderTable(){
         <td style="font-size:12px"><span class="badge b-teal">${r.dept_terkait||'—'}</span></td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.pic_eksternal||'—'}</td>
         <td><span class="badge ${skMap[r.status_koordinasi]||'b-gray'}">${r.status_koordinasi||'—'}</span></td>
-        <td>${deadlineBadge(dl)}</td>
+        <td>${deadlineBadge(dl, r.status_koordinasi)}</td>
         <td class="notes-cell" title="${r.notes||''}">${r.notes||'—'}</td>`;
     } else if(table==='delegasi'){
       cells=`
         <td class="title-cell" title="${r.judul||''}">${r.judul||'—'}</td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.didelegasikan_ke||'—'}</td>
         <td style="font-size:12px"><span class="badge b-pink">${r.dept||'—'}</span></td>
-        <td>${deadlineBadge(r.deadline_laporan)}</td>
+        <td>${deadlineBadge(r.deadline_laporan, r.status)}</td>
         <td>${statusBadge(r.status)}</td>
         <td class="notes-cell" title="${r.catatan_followup||''}">${r.catatan_followup||'—'}</td>`;
     }
