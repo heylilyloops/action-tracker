@@ -78,6 +78,11 @@
   tr.row-overdue:hover td{background:#ffe4e4}
 
   .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap}
+  /* Dept colors */
+  .dept-op{background:#d4e6db;color:#1a3d2b;border:1px solid #a8cbb5}
+  .dept-hub{background:#e8ece3;color:#4a5440;border:1px solid #c8d0bc}
+  .dept-sup{background:#e4e0d8;color:#4a4438;border:1px solid #c0b8a8}
+  .dept-svc{background:#f0ede6;color:#5a5448;border:1px solid #d8d0c0}
   .b-blue{background:#deeaf8;color:#1a4fa0}
   .b-green{background:#daf0e6;color:#1a6b3e}
   .b-amber{background:#fef0d8;color:#a06010}
@@ -268,11 +273,11 @@ const COLUMNS = {
     {key:'deadline',label:'Deadline',type:'date'},
     {key:'status',label:'Status',type:'select',opts:['To Do','In Progress','Done','Menunggu']},
     {key:'notes',label:'Notes',type:'textarea'},
+    {key:'_extend_days',label:'Perpanjang deadline (hari)',type:'text'},
   ],
   projects:[
     {key:'nama_project',label:'Nama project',type:'text',required:true},
     {key:'dept',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
-    {key:'fase',label:'Fase / milestone',type:'text'},
     {key:'deskripsi',label:'Deskripsi task',type:'textarea'},
     {key:'responsible',label:'R — Responsible',type:'text'},
     {key:'accountable',label:'A — Accountable',type:'text'},
@@ -315,7 +320,7 @@ const COLUMNS = {
 
 const TABLE_HEADERS = {
   meetings:['Nama Meeting','Tgl Meeting','Peserta','Follow-up','PIC','Deadline','Status','Notes','Aksi'],
-  projects:['Nama Project','Fase','Deskripsi','R','A','C','I','Deadline','Status','Prioritas','Notes','Aksi'],
+  projects:['Nama Project','Deskripsi','R','A','C','I','Deadline','Status','Prioritas','Notes','Aksi'],
   tasks:['Judul Task','Deskripsi','PIC','Deadline','Prioritas','Status','Notes','Aksi'],
   koordinasi:['Topik','Dept','PIC Eksternal','Status Koordinasi','Deadline','Notes','Aksi'],
   delegasi:['Judul Task','Delegasi ke','Dept','Deadline Laporan','Status','Catatan Follow-up','Aksi'],
@@ -327,6 +332,17 @@ let editId = null;
 let editTable = null;
 let sortKey = null;
 let sortDir = 1; // 1=asc, -1=desc
+
+function deptBadge(dept){
+  if(!dept||dept==='—') return '<span style="color:var(--text-hint)">—</span>';
+  const map={
+    'Transport Operation':'dept-op',
+    'Transport HUB':'dept-hub',
+    'Transport Support':'dept-sup',
+    'Transport Service':'dept-svc',
+  };
+  return `<span class="badge ${map[dept]||'b-gray'}">${dept}</span>`;
+}
 
 function setSort(key){
   if(sortKey===key){ sortDir*=-1; }
@@ -447,7 +463,7 @@ function renderCharts(){
       datasets: [{
         label: 'Jumlah Task',
         data: deptCounts,
-        backgroundColor: ['#0d6e6e','#1a4fa0','#a06010','#4a2fa0'],
+        backgroundColor: ['#1a3d2b','#b5bfa8','#7a7060','#e8e4d8'],
         borderRadius: 6,
         borderSkipped: false,
       }]
@@ -704,7 +720,7 @@ function renderTable(){
     return `<tr class="${isOverdue?'row-overdue':''}">
         <td class="title-cell" title="${getTitle(r._table,r)}">${getTitle(r._table,r)}</td>
         <td><span class="badge ${catBadge[r._table]}">${catMap[r._table]}</span></td>
-        <td style="font-size:12px;color:var(--text-secondary)">${r.dept||r.dept_owner||'—'}</td>
+        <td>${deptBadge(r.dept||r.dept_owner)}</td>
         <td>${statusBadge(getStatus(r._table,r))}</td>
         <td>${r.prioritas?prioBadge(r.prioritas):'—'}</td>
         <td>${deadlineBadge(dl)}</td>
@@ -751,7 +767,6 @@ function renderTable(){
     } else if(table==='projects'){
       cells=`
         <td class="title-cell" title="${r.nama_project||''}">${r.nama_project||'—'}</td>
-        <td style="font-size:12px"><span class="badge b-gray">${r.fase||'—'}</span></td>
         <td class="notes-cell" title="${r.deskripsi||''}">${r.deskripsi||'—'}</td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.responsible||'—'}</td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.accountable||'—'}</td>
@@ -774,7 +789,7 @@ function renderTable(){
       const skMap={'Menunggu respons':'b-amber','Sudah dikonfirmasi':'b-green','Ditolak':'b-red'};
       cells=`
         <td class="title-cell" title="${r.topik||''}">${r.topik||'—'}</td>
-        <td style="font-size:12px"><span class="badge b-teal">${r.dept_terkait||'—'}</span></td>
+        <td>${deptBadge(r.dept||r.dept_terkait)}</td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.pic_eksternal||'—'}</td>
         <td><span class="badge ${skMap[r.status_koordinasi]||'b-gray'}">${r.status_koordinasi||'—'}</span></td>
         <td>${deadlineBadge(dl, r.status_koordinasi)}</td>
@@ -783,7 +798,7 @@ function renderTable(){
       cells=`
         <td class="title-cell" title="${r.judul||''}">${r.judul||'—'}</td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.didelegasikan_ke||'—'}</td>
-        <td style="font-size:12px"><span class="badge b-pink">${r.dept||'—'}</span></td>
+        <td>${deptBadge(r.dept_owner||r.dept)}</td>
         <td>${deadlineBadge(r.deadline_laporan, r.status)}</td>
         <td>${statusBadge(r.status)}</td>
         <td class="notes-cell" title="${r.catatan_followup||''}">${r.catatan_followup||'—'}</td>`;
@@ -853,6 +868,19 @@ async function saveRecord(){
     if(el) payload[c.key]=el.value||null;
     if(c.required&&(!el||!el.value.trim())){toast('Lengkapi field wajib!');return;}
   }
+  // Handle deadline extension for projects
+  if(table==='projects' && payload._extend_days){
+    const days = parseInt(payload._extend_days);
+    if(!isNaN(days) && days > 0 && payload.deadline){
+      const d = new Date(payload.deadline);
+      d.setDate(d.getDate() + days);
+      payload.deadline = d.toISOString().split('T')[0];
+    }
+    delete payload._extend_days;
+  } else {
+    delete payload._extend_days;
+  }
+
   let err;
   if(editId){
     const res=await sb.from(table).update(payload).eq('id',editId);
