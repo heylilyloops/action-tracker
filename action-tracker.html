@@ -47,6 +47,7 @@
   .kpi-val.neutral{color:var(--text)}
 
   .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+  .charts-row .chart-card:last-child{grid-column:1/-1}
   .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow)}
   .chart-title{font-size:10px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px;text-align:center}
   .chart-wrap{position:relative;height:200px}
@@ -73,6 +74,8 @@
   tr:last-child td{border-bottom:none}
   tr:hover td{background:#f4fafa}
   .empty-row td{text-align:center;padding:40px;color:var(--text-hint)}
+  tr.row-overdue td{background:#fff0f0}
+  tr.row-overdue:hover td{background:#ffe4e4}
 
   .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap}
   .b-blue{background:#deeaf8;color:#1a4fa0}
@@ -156,14 +159,27 @@
     <div class="kpi" id="kpi-done" onclick="kpiFilter('done')"><div class="kpi-label">Selesai</div><div class="kpi-val success" id="k-done">—</div></div>
   </div>
 
+  <!-- Executive Alert Banner -->
+  <div id="exec-alert-banner" style="display:none;background:#fff8f0;border:1.5px solid #f0a050;border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px">
+    <span style="font-size:20px;line-height:1">⚠️</span>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:700;color:#a05010;margin-bottom:4px">Executive Alert</div>
+      <div id="exec-alert-content" style="font-size:13px;color:#7a4010;line-height:1.6"></div>
+    </div>
+  </div>
+
   <div class="charts-row" id="charts-row">
     <div class="chart-card">
-      <div class="chart-title">Distribusi per Dept</div>
-      <div class="chart-wrap"><canvas id="chart-dept"></canvas></div>
+      <div class="chart-title">Task per Dept</div>
+      <div class="chart-wrap" style="height:180px"><canvas id="chart-dept"></canvas></div>
     </div>
     <div class="chart-card">
       <div class="chart-title">Distribusi per Status</div>
       <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+    </div>
+    <div class="chart-card" style="grid-column:1/-1">
+      <div class="chart-title">Aging Overdue (hari terlambat)</div>
+      <div class="chart-wrap" style="height:160px"><canvas id="chart-aging"></canvas></div>
     </div>
   </div>
 
@@ -417,19 +433,49 @@ let chartStatus = null;
 
 function renderCharts(){
   const all = getAllRows();
-  
-  // Dept chart
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // 1. Horizontal bar — Task per Dept
   const depts = ['Transport Operation','Transport HUB','Transport Support','Transport Service'];
   const deptCounts = depts.map(d => all.filter(r => (r.dept||r.dept_owner) === d).length);
-  const deptColors = ['#1a4fa0','#0a5c42','#8a5a00','#8a1a5c'];
-  
   const ctxDept = document.getElementById('chart-dept').getContext('2d');
   if(chartDept) chartDept.destroy();
   chartDept = new Chart(ctxDept, {
+    type: 'bar',
+    data: {
+      labels: depts.map(d => d.replace('Transport ','')),
+      datasets: [{
+        label: 'Jumlah Task',
+        data: deptCounts,
+        backgroundColor: ['#0d6e6e','#1a4fa0','#a06010','#4a2fa0'],
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {display: false},
+        tooltip: {callbacks:{label: ctx => ` ${ctx.raw} task`}}
+      },
+      scales: {
+        x: {grid:{color:'#eef4f4'}, ticks:{font:{size:11}}, beginAtZero:true},
+        y: {grid:{display:false}, ticks:{font:{size:11,weight:'500'}}}
+      }
+    }
+  });
+
+  // 2. Pie — Status
+  const statuses = ['To Do','In Progress','Done','Menunggu'];
+  const statCounts = statuses.map(s => all.filter(r => getStatus(r._table,r) === s).length);
+  const ctxStat = document.getElementById('chart-status').getContext('2d');
+  if(chartStatus) chartStatus.destroy();
+  chartStatus = new Chart(ctxStat, {
     type: 'pie',
     data: {
-      labels: depts,
-      datasets: [{data: deptCounts, backgroundColor: ['#d8f0ee','#deeaf8','#fef0d8','#ebe8fc'], borderColor: ['#0d6e6e','#1a4fa0','#a06010','#4a2fa0'], borderWidth: 2}]
+      labels: statuses,
+      datasets: [{data: statCounts, backgroundColor: ['#eef2f2','#deeaf8','#daf0e6','#fef0d8'], borderColor: ['#4a7070','#1a4fa0','#1a6b3e','#a06010'], borderWidth: 2}]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
@@ -440,28 +486,80 @@ function renderCharts(){
     }
   });
 
-  // Status chart
-  const statuses = ['To Do','In Progress','Done','Menunggu'];
-  const statCounts = statuses.map(s => all.filter(r => getStatus(r._table,r) === s).length);
-  const statColors = ['#eef2f2','#deeaf8','#daf0e6','#fef0d8'];
-  const statBorders = ['#4a7070','#1a4fa0','#1a6b3e','#a06010'];
-  
-  const ctxStat = document.getElementById('chart-status').getContext('2d');
-  if(chartStatus) chartStatus.destroy();
-  chartStatus = new Chart(ctxStat, {
-    type: 'pie',
+  // 3. Bar — Aging Overdue
+  const overdueRows = all.filter(r => {
+    const dl = getDeadline(r._table, r);
+    if(!dl || getStatus(r._table,r)==='Done') return false;
+    const d = new Date(dl); d.setHours(0,0,0,0);
+    return d < today;
+  });
+  const agingLabels = overdueRows.map(r => {
+    const title = getTitle(r._table, r);
+    return title.length > 20 ? title.substring(0,20)+'…' : title;
+  });
+  const agingDays = overdueRows.map(r => {
+    const d = new Date(getDeadline(r._table,r)); d.setHours(0,0,0,0);
+    return Math.round((today-d)/86400000);
+  });
+  const ctxAging = document.getElementById('chart-aging').getContext('2d');
+  if(window.chartAging) window.chartAging.destroy();
+  window.chartAging = new Chart(ctxAging, {
+    type: 'bar',
     data: {
-      labels: statuses,
-      datasets: [{data: statCounts, backgroundColor: statColors, borderColor: statBorders, borderWidth: 2}]
+      labels: agingLabels.length ? agingLabels : ['Tidak ada overdue'],
+      datasets: [{
+        label: 'Hari terlambat',
+        data: agingDays.length ? agingDays : [0],
+        backgroundColor: agingDays.map(d => d > 14 ? '#c0392b' : d > 7 ? '#e07030' : '#e0a030'),
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: {position: 'bottom', labels: {font:{size:11}, padding:8, boxWidth:12}},
-        tooltip: {callbacks:{label: ctx => ` ${ctx.label}: ${ctx.raw} task`}}
+        legend: {display:false},
+        tooltip: {callbacks:{label: ctx => ` ${ctx.raw} hari terlambat`}}
+      },
+      scales: {
+        x: {grid:{display:false}, ticks:{font:{size:10}, maxRotation:30}},
+        y: {grid:{color:'#eef4f4'}, ticks:{font:{size:11}}, beginAtZero:true, title:{display:true,text:'Hari',font:{size:10}}}
       }
     }
   });
+
+  // 4. Executive Alert
+  renderExecAlert(all, overdueRows, today);
+}
+
+function renderExecAlert(all, overdueRows, today){
+  const banner = document.getElementById('exec-alert-banner');
+  const alerts = [];
+  
+  if(overdueRows.length > 0){
+    alerts.push(`🔴 <b>${overdueRows.length} task overdue</b> belum diselesaikan`);
+  }
+  const weekEnd = new Date(today); weekEnd.setDate(today.getDate()+3);
+  const nearDeadline = all.filter(r => {
+    const dl = getDeadline(r._table,r);
+    if(!dl || getStatus(r._table,r)==='Done') return false;
+    const d = new Date(dl); d.setHours(0,0,0,0);
+    return d >= today && d <= weekEnd;
+  });
+  if(nearDeadline.length > 0){
+    alerts.push(`🟠 <b>${nearDeadline.length} task</b> deadline dalam 3 hari ke depan`);
+  }
+  const waiting = all.filter(r => getStatus(r._table,r)==='Menunggu');
+  if(waiting.length > 0){
+    alerts.push(`🟡 <b>${waiting.length} task</b> masih menunggu respons pihak lain`);
+  }
+
+  if(alerts.length > 0){
+    banner.style.display = 'flex';
+    document.getElementById('exec-alert-content').innerHTML = alerts.join('<br>');
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 function exportCSV(){
@@ -602,7 +700,8 @@ function renderTable(){
       const dl=getDeadline(r._table,r);
       const pic=r.pic||r.pic_internal||r.didelegasikan_ke||r.pic_eksternal||'—';
       const notes=r.notes||r.catatan_followup||r.keputusan||'';
-      return `<tr>
+      const isOverdue = (()=>{const dl=getDeadline(r._table,r);if(!dl||getStatus(r._table,r)==='Done')return false;const d=new Date(dl);d.setHours(0,0,0,0);const t=new Date();t.setHours(0,0,0,0);return d<t;})();
+    return `<tr class="${isOverdue?'row-overdue':''}">
         <td class="title-cell" title="${getTitle(r._table,r)}">${getTitle(r._table,r)}</td>
         <td><span class="badge ${catBadge[r._table]}">${catMap[r._table]}</span></td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.dept||r.dept_owner||'—'}</td>
@@ -690,7 +789,8 @@ function renderTable(){
         <td class="notes-cell" title="${r.catatan_followup||''}">${r.catatan_followup||'—'}</td>`;
     }
 
-    return `<tr>${cells}<td><button class="btn-icon" onclick="editRecord('${table}','${r.id}')">&#x270E;</button><button class="btn-icon btn-del" onclick="deleteRecord('${table}','${r.id}')">&#x2715;</button></td></tr>`;
+    const rowOverdue=(()=>{const dl=getDeadline(table,r);if(!dl||getStatus(table,r)==='Done')return false;const d=new Date(dl);d.setHours(0,0,0,0);const t=new Date();t.setHours(0,0,0,0);return d<t;})();
+    return `<tr class="${rowOverdue?'row-overdue':''}">${cells}<td><button class="btn-icon" onclick="editRecord('${table}','${r.id}')">&#x270E;</button><button class="btn-icon btn-del" onclick="deleteRecord('${table}','${r.id}')">&#x2715;</button></td></tr>`;
   }).join('');
 }
 
