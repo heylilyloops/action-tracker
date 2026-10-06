@@ -288,6 +288,7 @@ const COLUMNS = {
   projects:[
     {key:'nama_project',label:'Nama project',type:'text',required:true},
     {key:'dept',label:'Site',type:'select',opts:['NDC Jababeka','NDC Cikupa','NDC Sidoarjo','RDC Tallo','RDC Tamora','SDC Barat','SDC Timur','DC Cikande','Support']},
+    {key:'objective',label:'Objective',type:'textarea'},
     {key:'deskripsi',label:'Deskripsi task',type:'textarea'},
     {key:'responsible',label:'R — Responsible',type:'text'},
     {key:'accountable',label:'A — Accountable',type:'text'},
@@ -331,7 +332,7 @@ const COLUMNS = {
 
 const TABLE_HEADERS = {
   meetings:['Nama Meeting','Tgl Meeting','Peserta','Follow-up','PIC','Deadline','Status','Notes','Aksi'],
-  projects:['Nama Project','Deskripsi','R','A','C','I','Start Date','Deadline','Status','Prioritas','Notes','Aksi'],
+  projects:['Nama Project','Objective','Deskripsi','R','A','C','I','Start Date','Deadline','Status','Prioritas','Notes','Aksi'],
   tasks:['Judul Task','Deskripsi','PIC','Deadline','Prioritas','Status','Notes','Aksi'],
   koordinasi:['Topik','Dept','PIC Eksternal','Status Koordinasi','Deadline','Notes','Aksi'],
   delegasi:['Judul Task','Delegasi ke','Dept','Deadline Laporan','Status','Catatan Follow-up','Aksi'],
@@ -796,6 +797,7 @@ function renderTable(){
     } else if(table==='projects'){
       cells=`
         <td class="title-cell" title="${r.nama_project||''}">${r.nama_project||'—'}</td>
+        <td class="notes-cell" title="${r.objective||''}">${r.objective||'—'}</td>
         <td class="notes-cell" title="${r.deskripsi||''}">${r.deskripsi||'—'}</td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.responsible||'—'}</td>
         <td style="font-size:12px;color:var(--text-secondary)">${r.accountable||'—'}</td>
