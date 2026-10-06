@@ -78,11 +78,16 @@
   tr.row-overdue:hover td{background:#ffe4e4}
 
   .badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:6px;white-space:nowrap}
-  /* Dept colors */
-  .dept-op{background:#d4e6db;color:#1a3d2b;border:1px solid #a8cbb5}
-  .dept-hub{background:#e8ece3;color:#4a5440;border:1px solid #c8d0bc}
-  .dept-sup{background:#e4e0d8;color:#4a4438;border:1px solid #c0b8a8}
-  .dept-svc{background:#f0ede6;color:#5a5448;border:1px solid #d8d0c0}
+  /* Site colors */
+  .site-1{background:#ddeef8;color:#1a4a6e;border:1px solid #aad0ec}
+  .site-2{background:#dde8f8;color:#1a3a6e;border:1px solid #aabce0}
+  .site-3{background:#e8ddf8;color:#3a1a6e;border:1px solid #c4aae0}
+  .site-4{background:#ddf8ee;color:#1a6e4a;border:1px solid #aae0cc}
+  .site-5{background:#ddf8e4;color:#1a6e30;border:1px solid #aae0b8}
+  .site-6{background:#f8f0dd;color:#6e4a1a;border:1px solid #e0ccaa}
+  .site-7{background:#f8e8dd;color:#6e2a1a;border:1px solid #e0bcaa}
+  .site-8{background:#f8dde8;color:#6e1a3a;border:1px solid #e0aac0}
+  .site-9{background:#f0f0f0;color:#3a3a3a;border:1px solid #cccccc}
   .b-blue{background:#deeaf8;color:#1a4fa0}
   .b-green{background:#daf0e6;color:#1a6b3e}
   .b-amber{background:#fef0d8;color:#a06010}
@@ -175,7 +180,7 @@
 
   <div class="charts-row" id="charts-row">
     <div class="chart-card">
-      <div class="chart-title">Task per Dept</div>
+      <div class="chart-title">Task per Site</div>
       <div class="chart-wrap" style="height:180px"><canvas id="chart-dept"></canvas></div>
     </div>
     <div class="chart-card">
@@ -212,11 +217,16 @@
       <option value="week">Minggu ini</option>
     </select>
     <select id="f-dept" onchange="renderTable()">
-      <option value="">Semua dept</option>
-      <option>Transport Operation</option>
-      <option>Transport HUB</option>
-      <option>Transport Support</option>
-      <option>Transport Service</option>
+      <option value="">Semua site</option>
+      <option>NDC Jababeka</option>
+      <option>NDC Cikupa</option>
+      <option>NDC Sidoarjo</option>
+      <option>RDC Tallo</option>
+      <option>RDC Tamora</option>
+      <option>SDC Barat</option>
+      <option>SDC Timur</option>
+      <option>DC Cikande</option>
+      <option>Support</option>
     </select>
   </div>
 
@@ -264,7 +274,7 @@ const DEPTS = ['Transport Operation','Transport HUB','Transport Support','Transp
 const COLUMNS = {
   meetings:[
     {key:'nama_meeting',label:'Nama meeting',type:'text',required:true},
-    {key:'dept',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
+    {key:'dept',label:'Site',type:'select',opts:['NDC Jababeka','NDC Cikupa','NDC Sidoarjo','RDC Tallo','RDC Tamora','SDC Barat','SDC Timur','DC Cikande','Support']},
     {key:'tanggal_meeting',label:'Tanggal meeting',type:'date'},
     {key:'peserta',label:'Peserta',type:'text'},
     {key:'keputusan',label:'Keputusan',type:'textarea'},
@@ -277,20 +287,21 @@ const COLUMNS = {
   ],
   projects:[
     {key:'nama_project',label:'Nama project',type:'text',required:true},
-    {key:'dept',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
+    {key:'dept',label:'Site',type:'select',opts:['NDC Jababeka','NDC Cikupa','NDC Sidoarjo','RDC Tallo','RDC Tamora','SDC Barat','SDC Timur','DC Cikande','Support']},
     {key:'deskripsi',label:'Deskripsi task',type:'textarea'},
     {key:'responsible',label:'R — Responsible',type:'text'},
     {key:'accountable',label:'A — Accountable',type:'text'},
     {key:'consulted',label:'C — Consulted',type:'text'},
     {key:'informed',label:'I — Informed',type:'text'},
+    {key:'start_date',label:'Start Date',type:'date'},
     {key:'deadline',label:'Deadline',type:'date'},
-    {key:'status',label:'Status',type:'select',opts:['To Do','In Progress','Done','Menunggu']},
+    {key:'status',label:'Status',type:'select',opts:['On Track','At Risk','Delayed','On Hold','Completed']},
     {key:'prioritas',label:'Prioritas',type:'select',opts:['High','Medium','Low']},
     {key:'notes',label:'Notes',type:'textarea'},
   ],
   tasks:[
     {key:'judul',label:'Judul task',type:'text',required:true},
-    {key:'dept',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
+    {key:'dept',label:'Site',type:'select',opts:['NDC Jababeka','NDC Cikupa','NDC Sidoarjo','RDC Tallo','RDC Tamora','SDC Barat','SDC Timur','DC Cikande','Support']},
     {key:'deskripsi',label:'Deskripsi',type:'textarea'},
     {key:'pic_internal',label:'PIC internal',type:'text'},
     {key:'deadline',label:'Deadline',type:'date'},
@@ -300,7 +311,7 @@ const COLUMNS = {
   ],
   koordinasi:[
     {key:'topik',label:'Topik koordinasi',type:'text',required:true},
-    {key:'dept',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
+    {key:'dept',label:'Site',type:'select',opts:['NDC Jababeka','NDC Cikupa','NDC Sidoarjo','RDC Tallo','RDC Tamora','SDC Barat','SDC Timur','DC Cikande','Support']},
     {key:'dept_terkait',label:'Dept terkait',type:'text'},
     {key:'pic_eksternal',label:'PIC eksternal',type:'text'},
     {key:'status_koordinasi',label:'Status koordinasi',type:'select',opts:['Menunggu respons','Sudah dikonfirmasi','Ditolak','—']},
@@ -309,9 +320,9 @@ const COLUMNS = {
   ],
   delegasi:[
     {key:'judul',label:'Judul task',type:'text',required:true},
-    {key:'dept_owner',label:'Dept',type:'select',opts:['Transport Operation','Transport HUB','Transport Support','Transport Service']},
+    {key:'dept_owner',label:'Site',type:'select',opts:['NDC Jababeka','NDC Cikupa','NDC Sidoarjo','RDC Tallo','RDC Tamora','SDC Barat','SDC Timur','DC Cikande','Support']},
     {key:'didelegasikan_ke',label:'Didelegasikan ke',type:'text'},
-    {key:'dept',label:'Dept',type:'text'},
+    {key:'dept',label:'Site',type:'text'},
     {key:'deadline_laporan',label:'Deadline laporan balik',type:'date'},
     {key:'status',label:'Status',type:'select',opts:['To Do','In Progress','Done','Menunggu']},
     {key:'catatan_followup',label:'Catatan follow-up',type:'textarea'},
@@ -320,7 +331,7 @@ const COLUMNS = {
 
 const TABLE_HEADERS = {
   meetings:['Nama Meeting','Tgl Meeting','Peserta','Follow-up','PIC','Deadline','Status','Notes','Aksi'],
-  projects:['Nama Project','Deskripsi','R','A','C','I','Deadline','Status','Prioritas','Notes','Aksi'],
+  projects:['Nama Project','Deskripsi','R','A','C','I','Start Date','Deadline','Status','Prioritas','Notes','Aksi'],
   tasks:['Judul Task','Deskripsi','PIC','Deadline','Prioritas','Status','Notes','Aksi'],
   koordinasi:['Topik','Dept','PIC Eksternal','Status Koordinasi','Deadline','Notes','Aksi'],
   delegasi:['Judul Task','Delegasi ke','Dept','Deadline Laporan','Status','Catatan Follow-up','Aksi'],
@@ -334,12 +345,17 @@ let sortKey = null;
 let sortDir = 1; // 1=asc, -1=desc
 
 function deptBadge(dept){
-  if(!dept||dept==='—') return '<span style="color:var(--text-hint)">—</span>';
+  if(!dept||dept==='—'||!dept) return '<span style="color:var(--text-hint)">—</span>';
   const map={
-    'Transport Operation':'dept-op',
-    'Transport HUB':'dept-hub',
-    'Transport Support':'dept-sup',
-    'Transport Service':'dept-svc',
+    'NDC Jababeka':'site-1',
+    'NDC Cikupa':'site-2',
+    'NDC Sidoarjo':'site-3',
+    'RDC Tallo':'site-4',
+    'RDC Tamora':'site-5',
+    'SDC Barat':'site-6',
+    'SDC Timur':'site-7',
+    'DC Cikande':'site-8',
+    'Support':'site-9',
   };
   return `<span class="badge ${map[dept]||'b-gray'}">${dept}</span>`;
 }
@@ -412,11 +428,23 @@ function deadlineBadge(dl, status){
   const d=new Date(dl);d.setHours(0,0,0,0);
   const diff=Math.round((d-today)/(86400000));
   const dateStr=d.toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
-  if(status==='Done') return `<span class="badge b-green">${dateStr}</span>`;
+  if(status==='Done'||status==='Completed') return `<span class="badge b-green">${dateStr}</span>`;
   if(diff<0) return `<span class="badge b-red-dark">Overdue ${Math.abs(diff)}h</span>`;
   if(diff===0) return `<span class="badge b-red">Hari ini</span>`;
   if(diff<=3) return `<span class="badge b-amber">${diff} hari lagi</span>`;
   return `<span class="badge b-gray">${dateStr}</span>`;
+}
+
+function projectStatusBadge(s){
+  if(!s) return '—';
+  const map={
+    'On Track':'b-green',
+    'At Risk':'b-amber',
+    'Delayed':'b-red',
+    'On Hold':'b-gray',
+    'Completed':'b-blue',
+  };
+  return `<span class="badge ${map[s]||'b-gray'}">${s}</span>`;
 }
 
 function statusBadge(s){
@@ -451,19 +479,19 @@ function renderCharts(){
   const all = getAllRows();
   const today = new Date(); today.setHours(0,0,0,0);
 
-  // 1. Horizontal bar — Task per Dept
-  const depts = ['Transport Operation','Transport HUB','Transport Support','Transport Service'];
+  // 1. Horizontal bar — Task per Site
+  const depts = ['NDC Jababeka','NDC Cikupa','NDC Sidoarjo','RDC Tallo','RDC Tamora','SDC Barat','SDC Timur','DC Cikande','Support'];
   const deptCounts = depts.map(d => all.filter(r => (r.dept||r.dept_owner) === d).length);
   const ctxDept = document.getElementById('chart-dept').getContext('2d');
   if(chartDept) chartDept.destroy();
   chartDept = new Chart(ctxDept, {
     type: 'bar',
     data: {
-      labels: depts.map(d => d.replace('Transport ','')),
+      labels: depts,
       datasets: [{
         label: 'Jumlah Task',
         data: deptCounts,
-        backgroundColor: ['#1a3d2b','#b5bfa8','#7a7060','#e8e4d8'],
+        backgroundColor: ['#1a4a6e','#1a3a6e','#3a1a6e','#1a6e4a','#1a6e30','#6e4a1a','#6e2a1a','#6e1a3a','#3a3a3a'],
         borderRadius: 6,
         borderSkipped: false,
       }]
@@ -773,8 +801,9 @@ function renderTable(){
         <td style="font-size:12px;color:var(--text-secondary)">${r.accountable||'—'}</td>
         <td class="tag-cell" style="font-size:12px;color:var(--text-secondary)" title="${r.consulted||''}">${r.consulted||'—'}</td>
         <td class="tag-cell" style="font-size:12px;color:var(--text-secondary)" title="${r.informed||''}">${r.informed||'—'}</td>
-        <td>${deadlineBadge(dl, r.status)}</td>
-        <td>${statusBadge(r.status)}</td>
+        <td style="font-size:12px;color:var(--text-secondary)">${r.start_date?new Date(r.start_date).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'}):'—'}</td>
+        <td>${deadlineBadge(dl, r.status==='Completed'?'Done':r.status)}</td>
+        <td>${projectStatusBadge(r.status)}</td>
         <td>${prioBadge(r.prioritas)}</td>
         <td class="notes-cell" title="${r.notes||''}">${r.notes||'—'}</td>`;
     } else if(table==='tasks'){
